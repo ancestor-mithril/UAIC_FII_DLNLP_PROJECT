@@ -3,6 +3,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 
 
 def get_labels():
+    # TODO: Remove one
     return [line.rstrip() for line in open("./data/scorers/techniques_subtask3.txt", encoding='utf-8').readlines()]
 
 

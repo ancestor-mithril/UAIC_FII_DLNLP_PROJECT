@@ -1,5 +1,14 @@
 import os
+import re
+import string
+
+import nltk.corpus
+import numpy as np
 import pandas as pd
+from collections import Counter
+
+from nltk import word_tokenize
+from nltk.corpus import stopwords
 from tqdm import tqdm
 
 
@@ -32,6 +41,10 @@ def make_dataframe(input_folder, labels_fn=None):
     return df
 
 
+def get_labels():
+    return [line.rstrip() for line in open("./data/scorers/techniques_subtask3.txt", encoding='utf-8').readlines()]
+
+
 def get_all_languages():
     return [x for x in os.listdir('./data/data')]
 
@@ -43,11 +56,112 @@ def load_train_and_dev(language):
     return test_dataset, dev_dataset
 
 
+def get_language(language):
+    available = {
+        'ca': 'catalan',
+        'cs': 'czech',
+        'de': 'german',
+        'el': 'greek',
+        'en': 'english',
+        'es': 'spanish',
+        'fi': 'finnish',
+        'fr': 'french',
+        'hu': 'hungarian',
+        'is': 'icelandic',
+        'it': 'italian',
+        'lv': 'latvian',
+        'nl': 'dutch',
+        'pl': 'polish',
+        'pt': 'portuguese',
+        'ro': 'romanian',
+        'ru': 'russian',
+        'sk': 'slovak',
+        'sl': 'slovenian',
+        'sv': 'swedish',
+        'ta': 'tamil'
+    }
+    return available.get(language, language)  # default is the same
+
+
+def build_stop_words(language):
+    stop_words = set(stopwords.words(get_language(language)))
+    punctuation = string.punctuation + '-' + '+' + '—' + '„' + "”"
+    special_tokens = ["'s", "'m", "", "``"]
+    return list(stop_words) + list(punctuation) + special_tokens
+
+
+def tokenize(dataset, remove):
+    words = Counter()
+    for i, row in dataset.iterrows():
+        tokens = []
+        for word in word_tokenize(row["text"]):
+            word = word.lower()
+            if word in remove:
+                continue
+            words.update([word])
+            tokens.append(word)
+        row["text"] = tokens
+
+    return words
+
+
+def get_word2idx(words):
+    # Removing the words that only appear once
+    words = {k: v for k, v in words.items() if v > 1}
+    # Sorting the words according to the number of appearances, with the most common word being first
+    words = sorted(words, key=words.get, reverse=True)
+    # Adding padding and unknown to our vocabulary so that they will be assigned an index
+    words = ['_PAD', '_UNK'] + words
+    # Dictionary to store the word to index mappings
+    word2idx = {o: i for i, o in enumerate(words)}
+    return word2idx
+
+
+def sentences2indices(dataset, word2idx):
+    for i, row in dataset.iterrows():
+        row["text"] = [word2idx.get(word, '_UNK') for word in row["text"]]
+
+
+def pad_input(dataset, seq_len):
+    """
+    Shortens the sentences or pads them with 0.
+    :param dataset: Dataframe with sentences in "text"
+    :param seq_len: The length of the sequence
+    :return:
+    """
+    features = np.zeros((len(dataset["text"]), seq_len), dtype=int)
+    for index, words in enumerate(dataset["text"]):
+        if len(words) != 0:
+            features[index, -len(words):] = np.array(words)[:seq_len]
+
+
+def labels_to_multi_hot(dataset, labels):
+    # TODO: dataset["labels"] to multihot depending on labels
+    pass
+
+
+def preprocess(dataset, language):
+    remove = build_stop_words(language)
+
+    words = tokenize(dataset, remove)
+
+    word2idx = get_word2idx(words)
+
+    sentences2indices(dataset, word2idx)
+
+    pad_input(dataset, 200)  # TODO: make this a parameter
+
+
+
+
+
 def main():
     df1, df2 = load_train_and_dev("en")
     print(df1)
     print(df2)
     print(get_all_languages())
+    preprocess(df1, "en")
+    print(df1)
 
 
 if __name__ == "__main__":

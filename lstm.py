@@ -24,18 +24,17 @@ class LSTMMultiLabelClassifier(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_size)
         self.sigmoid = nn.Sigmoid()  # Sigmoid because it's multi-label
 
-
     def init_hidden(self, batch_size):
         return (autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)),
                 autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)))
 
     def forward(self, batch, lengths):
-        # TODO? self or not?
-        hidden = self.init_hidden(batch.size(-1))
+        self.hidden = self.init_hidden(batch.size(-1))
+        # self because then it can be zero graded?
 
         embeds = self.embedding(batch)
         packed_input = pack_padded_sequence(embeds, lengths)
-        outputs, (ht, ct) = self.lstm(packed_input, hidden)
+        outputs, (ht, ct) = self.lstm(packed_input, self.hidden)
 
         # ht is the last hidden state of the sequences
         # ht = (1 x batch_size x hidden_dim)
