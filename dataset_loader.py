@@ -32,6 +32,10 @@ def make_dataframe(input_folder, labels_fn=None):
     return df
 
 
+def get_all_languages():
+    return [x for x in os.listdir('./data/data')]
+
+
 def load_train_and_dev(language):
     test_dataset = make_dataframe(f"./data/data/{language}/train-articles-subtask-3/",
                                   f"./data/data/{language}/train-labels-subtask-3.txt")
@@ -43,6 +47,7 @@ def main():
     df1, df2 = load_train_and_dev("en")
     print(df1)
     print(df2)
+    print(get_all_languages())
 
 
 if __name__ == "__main__":
