@@ -40,12 +40,12 @@ def extract_matching_lists(predicted, gold):
 
 def evaluate(predicted, gold, classes):
     """
-    :param predicted: dict with predictions
-    :param gold: dict with gold labels
+    :param predicted: list with predictions
+    :param gold: list with gold labels
     :param classes: list of classes
     :return: the micro-F1 and macro-F1 score
     """
-    predicted, gold = extract_matching_lists(predicted, gold)
+
     mlb = MultiLabelBinarizer()
     mlb.fit([classes])
     predicted = mlb.transform(predicted)
@@ -60,6 +60,7 @@ def score(predicted_path, gold_path):
     predicted = read_input_file(predicted_path)
     gold = read_input_file(gold_path)
     labels = get_labels()
+    predicted, gold = extract_matching_lists(predicted, gold)
     micro_f1, macro_f1 = evaluate(predicted, gold, labels)
     print(f"micro-F1={micro_f1:.5f}\tmacro-F1={macro_f1:.5f}")
     return micro_f1, macro_f1

@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 
 class LSTMMultiLabelClassifier(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_size):
+    def __init__(self, vocab_size, embedding_dim, num_layers, hidden_dim, output_size):
         # TODO: add pretrained embedding weights and freeze them
         super(LSTMMultiLabelClassifier, self).__init__()
 
@@ -18,23 +18,26 @@ class LSTMMultiLabelClassifier(nn.Module):
         self.vocab_size = vocab_size
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=1)
+        # TODO: Parametrize this
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, dropout=0.2, batch_first=True, bidirectional=True)
+
+        self.num_layers = num_layers
 
         self.dropout_layer = nn.Dropout(p=0.2)
         self.fc = nn.Linear(hidden_dim, output_size)
         self.sigmoid = nn.Sigmoid()  # Sigmoid because it's multi-label
 
     def init_hidden(self, batch_size):
-        return (autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)),
-                autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)))
+        return (autograd.Variable(torch.randn(4, batch_size, self.hidden_dim)).to(self.fc.weight.device),
+                autograd.Variable(torch.randn(4, batch_size, self.hidden_dim)).to(self.fc.weight.device))
 
-    def forward(self, batch, lengths):
-        self.hidden = self.init_hidden(batch.size(-1))
+    def forward(self, batch):
+        self.hidden = self.init_hidden(batch.size(0))
         # self because then it can be zero graded?
 
         embeds = self.embedding(batch)
-        packed_input = pack_padded_sequence(embeds, lengths)
-        outputs, (ht, ct) = self.lstm(packed_input, self.hidden)
+        pack_padded_sequence(embeds, torch.tensor([batch.size(1) for _ in range(batch.size(0))]), batch_first=True)
+        outputs, (ht, ct) = self.lstm(embeds, self.hidden)
 
         # ht is the last hidden state of the sequences
         # ht = (1 x batch_size x hidden_dim)

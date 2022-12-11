@@ -85,8 +85,8 @@ def get_language(language):
 
 def build_stop_words(language):
     stop_words = set(stopwords.words(get_language(language)))
-    punctuation = string.punctuation + '-' + '+' + '—' + '„' + "”"
-    special_tokens = ["'s", "'m", "", "``"]
+    punctuation = string.punctuation + '-' + '+' + '—' + '„' + "”" + '–' + '“' + '’' + '‘'
+    special_tokens = ["'s", "'m", "", "``", '\'\'', ]
     return list(stop_words) + list(punctuation) + special_tokens
 
 
@@ -119,7 +119,7 @@ def get_word2idx(words):
 
 def sentences2indices(dataset, word2idx):
     for i, row in dataset.iterrows():
-        row["text"] = [word2idx.get(word, '_UNK') for word in row["text"]]
+        row["text"] = [word2idx.get(word, word2idx['_UNK']) for word in row["text"]]
 
 
 def pad_input(dataset, seq_len):
@@ -129,15 +129,21 @@ def pad_input(dataset, seq_len):
     :param seq_len: The length of the sequence
     :return:
     """
-    features = np.zeros((len(dataset["text"]), seq_len), dtype=int)
-    for index, words in enumerate(dataset["text"]):
-        if len(words) != 0:
-            features[index, -len(words):] = np.array(words)[:seq_len]
+    for index, row in enumerate(dataset.iterrows()):
+        features = np.zeros(seq_len, dtype=int)
+        key, row = row
+        if len(row["text"]) != 0:
+            # TODO: Padding at front? Why not padding at back
+            features[-len(row["text"]):] = np.array(row["text"])[:seq_len]
+        row["text"] = features
 
 
 def labels_to_multi_hot(dataset, labels):
-    # TODO: dataset["labels"] to multihot depending on labels
-    pass
+    for i, row in dataset.iterrows():
+        multihot = np.zeros(len(labels))
+        for l in row["labels"].split(","):
+            multihot[labels.index(l)] = 1.0
+        row["labels"] = multihot
 
 
 def preprocess(dataset, language):
@@ -149,10 +155,18 @@ def preprocess(dataset, language):
 
     sentences2indices(dataset, word2idx)
 
-    pad_input(dataset, 200)  # TODO: make this a parameter
+    pad_input(dataset, 90)  # TODO: make this a parameter
+    # TODO: get a good padding size
+
+    labels_to_multi_hot(dataset, get_labels())
+
+    return word2idx
 
 
-
+def get_preprocessed(language):
+    df, _ = load_train_and_dev("en")
+    word2idx = preprocess(df, language)
+    return df, word2idx
 
 
 def main():
