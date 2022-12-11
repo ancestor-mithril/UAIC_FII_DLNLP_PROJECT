@@ -134,7 +134,7 @@ def pad_input(dataset, seq_len):
         key, row = row
         if len(row["text"]) != 0:
             # TODO: Padding at front? Why not padding at back
-            features[-len(row["text"]):] = np.array(row["text"])[:seq_len]
+            features[:len(row["text"])] = np.array(row["text"])[:seq_len]
         row["text"] = features
 
 

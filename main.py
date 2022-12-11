@@ -100,7 +100,7 @@ def main():
     device = get_device()
     model = get_model(device, word2idx)
     criterion = BCEWithLogitsLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9, nesterov=True, weight_decay=0.00005)
+    optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.8, nesterov=True, weight_decay=0.00001)
     for _ in range(1000):
         train(model, criterion, optimizer, train_loader, device)
 
